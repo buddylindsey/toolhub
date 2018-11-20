@@ -21,11 +21,13 @@ services:
             DEBUG: 'true'
             ALLOWED_HOSTS: '*'
             DATABASE_URL: postgres://postgres:postgres@toolhub-db/toolhub
+            SEARCH_HOST: toolhub-search:9200
             MEDIA_ROOT: /var/www/media/
             STATIC_ROOT: /var/www/static/
             PYTHONUNBUFFERED: 1
         depends_on:
             - db
+            - search
         env_file: .dockerenv
         networks:
             app_net:
@@ -47,6 +49,25 @@ services:
             app_net:
                 aliases:
                     - toolhub-db
+    search:
+        image: elasticsearch:6.5.0
+        ports:
+            - "${SEARCH_PORT-0}:9200"
+        environment:
+            - cluster.name=docker-cluster
+            - discovery.type=single-node
+            - bootstrap.memory_lock=true
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        volumes:
+            - search-volume:/usr/share/elasticsearch/data
+        networks:
+            app_net:
+                aliases:
+                    - toolhub-search
 
 volumes:
     db-volume:
@@ -55,6 +76,8 @@ volumes:
         name: toolhub_python-packages
     upload-volume:
         name: toolhub_upload-volume
+    search-volume:
+        name: toolhub_search-volume
 
 networks:
     app_net:
